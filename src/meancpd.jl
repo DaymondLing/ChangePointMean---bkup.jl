@@ -1,0 +1,132 @@
+"""
+mcppv(ts::AbstractVector; shuffle::Int = 500)
+    return p-value of a change point of mean in ts
+    shuffle is number of randomization used to generate distribution
+    uses global random number generator
+"""
+function mcppv(ts::AbstractVector; shuffle::Int = 500)
+    length(ts) <= 1 && return 1.                    # large pvalue is no change
+
+    dev = ts .- mean(ts)                            # centered
+    cusum = Vector{Float64}(undef, length(ts))
+    cumsum!(cusum, dev)                             # cumsum
+    cmax_obs = maximum(abs, cusum)                  # max abs cumsum observed
+
+    n = 0
+    for _ in 1:shuffle
+        shuffle!(dev)
+        cumsum!(cusum, dev)
+        cmax = maximum(abs, cusum)
+        if cmax >= cmax_obs
+            n += 1
+        end
+    end
+
+    round((n + 1) / (shuffle + 1), digits = 5)      # p-value
+end
+
+
+"""
+mcptime(ts::AbstractVector; minlen::Int = 1)
+    return index of start of new segment via minimum ssq
+    0 is returned if minlen is not least twice length of ts
+    minlen is minimum length of segments to consider
+"""
+function mcptime(ts::AbstractVector; minlen::Int = 3)
+    minlen < 1 && return 0
+    len = length(ts)
+    len < 2*minlen && return 0
+
+    chgpoint = 0
+    minssq = Inf
+    @inbounds for brk = minlen+1:len+1-minlen
+        @views ssqtot = ssq(ts[1:brk-1]) + ssq(ts[brk:len])
+        if ssqtot < minssq
+            minssq = ssqtot
+            chgpoint = brk
+        end
+    end
+
+    chgpoint
+end
+
+
+"""
+ssq(v) returns sum of squares about the mean (no allocations)
+"""
+@inline ssq(v) = sum(abs2, v) - sum(v)^2/length(v)
+
+
+"""
+mcpoint(ts::AbstractVector; pcut=0.05, shuffle=500, minlen=3)
+    return index of change point in mean if it exists, 0 otherwise
+    pcut is p-value cut-off, shuffle is number of randomizations
+    minlen is minimum length to consider for a segment
+"""
+function mcpoint(ts::AbstractVector; pcut=0.05, shuffle::Int=500, minlen::Int=3)
+    minlen < 1 && return 0
+    len = length(ts)
+    len < 2*minlen && return 0
+
+    chgpoint = 0
+    if mcppv(ts; shuffle = shuffle) <= pcut
+        brk = mcptime(ts; minlen = minlen)
+        if minlen < brk <= (len - minlen + 1)
+            chgpoint = brk
+        end
+    end
+
+    chgpoint
+end
+
+
+"""
+mcplast(ts::AbstractVector; pcut=0.05, shuffle=500, minlen=3)
+    return index of rightmost change point if any, 0 otherwise
+    pcut is p-value cut-off, shuffle is number of randomizations
+    minlen is the minimum length of a segment
+"""
+function mcplast(ts::AbstractVector; pcut=0.05, shuffle::Int=500, minlen::Int=3)
+    minlen < 1 && return 0
+    len = length(ts)
+    len < 2*minlen && return 0
+
+    head = 1
+    brk = mcpoint(ts[head:len]; pcut=pcut, minlen=minlen, shuffle=shuffle)
+    while brk > 0
+        head += brk - 1         # keep checking right hand segment
+        brk = mcpoint(ts[head:len]; pcut=pcut, minlen=minlen, shuffle=shuffle)
+    end
+
+    head == 1 ? 0 : head
+end
+
+##---   all change points if they exist
+
+"""
+mcpall(ts::AbstractVector; pcut = 0.05, shuffle = 500, minlen = 3)
+    return vector of index of all change points via recursive partitioning
+    pcut is p-value cut-off, shuffle is number of randomizations
+    minlen is the minimum length of a segment
+"""
+function mcpall(ts::AbstractVector; pcut=0.05, shuffle::Int=500, minlen::Int=3)
+    chgpts = Vector{Int}(undef, 0)
+    minlen < 1 && return chgpts
+    len = length(ts)
+    len < 2*minlen && return chgpts
+
+    _mcpall!(chgpts, 1, ts; pcut=pcut, shuffle=shuffle, minlen=minlen)
+    sort!(chgpts)
+end
+
+function _mcpall!(chgpts::AbstractVector, head::Int, ts::AbstractVector;
+                pcut=0.05, shuffle::Int=500, minlen::Int=3)
+    len = length(ts)
+    chg = mcpoint(ts; pcut=pcut, shuffle=shuffle, minlen=minlen)
+    chg == 0 && return                      # no change point, stop
+    append!(chgpts, head + chg - 1)         # remember change point
+    _mcpall!(chgpts, head, ts[1:chg-1]; pcut=pcut, shuffle=shuffle, minlen=minlen)
+    _mcpall!(chgpts, head+chg-1, ts[chg:len]; pcut=pcut, shuffle=shuffle, minlen=minlen)
+
+    nothing
+end
