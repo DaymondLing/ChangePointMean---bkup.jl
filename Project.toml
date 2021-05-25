@@ -1,0 +1,13 @@
+name = "ChangePointMean"
+uuid = "6497d641-a15f-4002-900c-202670d1243f"
+authors = ["Daymond Ling"]
+version = "0.1.0"
+
+[compat]
+julia = "1.5"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
