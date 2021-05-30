@@ -80,9 +80,9 @@ end
 
 
 """
-ssq(v) returns sum of squares about the mean (no allocations)
+ssq(v) returns sum of squares
 """
-@inline ssq(v) = sum(abs2, v) - sum(v)^2/length(v)
+@inline ssq(v::AbstractVector) = var(v) * (length(v) - 1)
 
 
 """
