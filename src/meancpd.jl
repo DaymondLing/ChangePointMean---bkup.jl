@@ -52,6 +52,34 @@ end
 
 
 """
+mcptimechk(ts::AbstractVector; minlen::Int = 1)
+    return index of start of new segment via minimum ssq
+    0 is returned if minlen is not least twice length of ts
+    minlen is minimum length of segments to consider
+"""
+function mcptimechk(ts::AbstractVector; minlen::Int = 3)
+    minlen < 1 && return 0
+    len = length(ts)
+    len < 2*minlen && return 0
+
+    chgpoint = 0
+    minssq = Inf
+    @inbounds for brk = minlen+1:len+1-minlen
+        @views ssq_l = ssq(ts[1:brk-1])
+        @views ssq_r = ssq(ts[brk:len])
+        ssqtot = ssq_l + ssq_r
+        println("Index $brk   $ssqtot $ssq_l $ssq_r")
+        if ssqtot < minssq
+            minssq = ssqtot
+            chgpoint = brk
+        end
+    end
+
+    chgpoint
+end
+
+
+"""
 ssq(v) returns sum of squares about the mean (no allocations)
 """
 @inline ssq(v) = sum(abs2, v) - sum(v)^2/length(v)
