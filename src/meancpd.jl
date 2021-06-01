@@ -161,6 +161,14 @@ end
 
 ##---   mcplot
 
+"""
+mcplot(ts::AbstractVector; chgpts=Int[], palette=:seaborn_bright)
+    returns plot of ts with chgpts as change points (default is none)
+    palette is the default color scheme to use
+
+    e.g., mcplot(ts) is a plain plot of the time series
+    mcplot(ts, chgpts=mcpall(ts)) is plot of ts with mcpall(ts) change points
+"""
 function mcplot(ts::AbstractVector; chgpts=Int[], palette=:seaborn_bright)
     len = length(ts)
     plt = plot(size=(600, 400), bar_width=0.9, xlims=(0.5, len+0.5),

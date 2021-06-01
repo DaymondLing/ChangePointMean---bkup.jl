@@ -10,6 +10,7 @@ export mcptimechk
 export mcpoint              # Single change point in Mean
 export mcplast              # Most recent change point (rightmost)
 export mcpall               # All change point
+export mcplot
 
 include("meancpd.jl")
 
