@@ -158,3 +158,23 @@ function _mcpall!(chgpts::AbstractVector, head::Int, ts::AbstractVector;
 
     nothing
 end
+
+##---   mcplot
+
+function mcplot(ts::AbstractVector; chgpts=Int[], palette=:seaborn_bright)
+    len = length(ts)
+    plt = plot(size=(600, 400), bar_width=0.9, xlims=(0.5, len+0.5),
+        titlefont=(8), xtickfontsize=6, palette=palette)
+
+    vline!(-0.5 .+ chgpts, lc=:blue, ls=:dash, lw=1, label=false)
+
+    n = 0
+    for (t1,t2) in zip(reverse([1; chgpts]), reverse([chgpts .- 1; length(ts)]))
+        n += 1
+        m = mean(ts[t1:t2])
+        plot!(t1:t2, ts[t1:t2], st=:bar, lc=nothing, label=false, fc=n)
+        plot!([t1-0.5, t2+0.5], [m, m], lc=:blue, ls=:dot, lw=2, label=false)
+    end
+    
+    plt
+end

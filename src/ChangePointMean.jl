@@ -2,6 +2,7 @@ module ChangePointMean
 
 using Random
 using Statistics
+using Plots
 
 export mcppv                # p-value of existence of change point
 export mcptime              # index of change point (new segment)
